@@ -1,6 +1,6 @@
 # Deployment instructions
 # 0. Fill in `pypirc.sample`, and `cp pypirc.sample ~/.pypirc`
-# 1. Check changelogs.rst and check if documents are up-to-date (make show_docs, make show_docs_ko will help you out)
+# 1. Check changelogs.rst and check if documents are up-to-date (Make show_docs, make show_docs_ko will help you out. Requirements can be installed by `git submodule init; git submodule update`.)
 # 2. Check translations at docs/locale/ko/LC_MESSAGES/*.po
 # 3. Check version at konlpy/konlpy/about.py
 # 4. $ make testpypi
@@ -15,15 +15,24 @@ build:
 	python setup.py sdist --formats=gztar,zip
 
 check:
-	check-manifest
+	check-manifest \
+	--ignore \
+	.gitmodules,CONTRIBUTING*,LICENSE,Makefile,build.xml,pypirc.sample,reinstall,requirements-dev.txt,\
+	docs/**,konlpy/java/src/**,scripts/** \
+	--ignore-bad-ideas *.mo
+
 	pyroma dist/konlpy-*tar.gz
-	pep8 --ignore=E501 konlpy/*.py
-	pep8 --ignore=E501 konlpy/*/*.py
+
+	# E126: Continuation line over-indented
+	# E402: Module level import not at top of file
+	# E501: Line too long
+	# E701: Multiple statements on one line(colon)
+	pep8 --ignore=E501,E402 konlpy/*.py
+	pep8 --ignore=E501,E701,E126 konlpy/*/*.py
 
 testpypi:
-	python setup.py register -r pypitest
-	python setup.py sdist --formats=gztar upload -r pypitest
-	python setup.py bdist_wheel upload -r pypitest
+	python setup.py sdist bdist_wheel
+	twine upload --repository testpypi dist/*
 	# Execute below manually
 	# 	cd /tmp
 	# 	virtualenv venv
@@ -36,12 +45,11 @@ testpypi:
 	# 	deactivate
 
 pypi:
-	python setup.py register -r pypi
-	python setup.py sdist --formats=gztar upload -r pypi
-	python setup.py bdist_wheel upload -r pypi
+	python setup.py sdist bdist_wheel
+	twine upload --repository pypi dist/*
 
 java:
-	ant compile
+	ant clean compile
 
 jcc:
 	python -m jcc \
@@ -64,13 +72,13 @@ show_docs:
 	cd docs\
 		&& make html \
 		&& cd _build/html \
-		&& python -m SimpleHTTPServer
+		&& python -m http.server
 
 show_docs_ko:
 	cd docs\
 		&& make -e SPHINXOPTS="-D language='ko'" html \
 		&& cd _build/html \
-		&& python -m SimpleHTTPServer
+		&& python -m http.server
 
 extract_i18n:
 	cd docs\

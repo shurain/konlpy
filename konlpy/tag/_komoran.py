@@ -6,6 +6,7 @@ import os
 import jpype
 
 from konlpy import jvm, utils
+from konlpy.tag._common import validate_phrase_inputs
 
 
 __all__ = ['Komoran']
@@ -50,44 +51,6 @@ class Komoran():
     :param max_heap_size: Maximum memory usage limitation (Megabyte) :py:func:`.init_jvm`.
     """
 
-    def pos(self, phrase, flatten=True, join=False):
-        """POS tagger.
-
-        :param flatten: If False, preserves eojeols.
-        :param join: If True, returns joined sets of morph and tag.
-        """
-
-        sentences = phrase.split('\n')
-        morphemes = []
-        if not sentences:
-            return morphemes
-
-        for sentence in sentences:
-            if not sentence:
-                continue
-            result = self.jki.analyze(sentence).getTokenList()
-            result = [(token.getMorph(), token.getPos()) for token in result]
-
-            if join:
-                result = ['{}/{}'.format(morph, pos) for morph, pos in result]
-
-            morphemes.append(result)
-
-        if flatten:
-            return sum(morphemes, [])
-        return morphemes
-
-    def nouns(self, phrase):
-        """Noun extractor."""
-
-        tagged = self.pos(phrase)
-        return [s for s, t in tagged if t.startswith('NN')]
-
-    def morphs(self, phrase):
-        """Parse phrase to morphemes."""
-
-        return [s for s, t in self.pos(phrase)]
-
     def __init__(self, jvmpath=None, userdic=None, modelpath=None, max_heap_size=1024):
         if not jpype.isJVMStarted():
             jvm.init_jvm(jvmpath, max_heap_size)
@@ -104,8 +67,47 @@ class Komoran():
 
         try:
             self.jki = komoranJavaPackage.Komoran(self.modelpath)
-        except TypeError:  # Package kr.lucypark.komoran.KomoranInterface is not Callable
+        except TypeError:  # Package kr.co.shineware.nlp.komoran.core.Komoran is not Callable
             raise IOError("Cannot access komoran-dic. Please leave an issue at https://github.com/konlpy/konlpy/issues")
 
         if userdic:
             self.jki.setUserDic(userdic)
+
+    def pos(self, phrase, flatten=True, join=False):
+        """POS tagger.
+
+        :param flatten: If False, preserves eojeols.
+        :param join: If True, returns joined sets of morph and tag.
+        """
+        validate_phrase_inputs(phrase)
+
+        sentences = phrase.split('\n')
+        morphemes = []
+        if not sentences:
+            return morphemes
+
+        for sentence in sentences:
+            if not sentence.strip():
+                continue
+            result = self.jki.analyze(sentence).getTokenList()
+            result = [(token.getMorph(), token.getPos()) for token in result]
+
+            if join:
+                result = ['{}/{}'.format(morph, pos) for morph, pos in result]
+
+            morphemes.append(result)
+
+        if flatten:
+            return sum(morphemes, [])
+        return morphemes
+
+    def nouns(self, phrase):
+        """Noun extractor."""
+
+        tagged = self.pos(phrase.strip())
+        return [s for s, t in tagged if t.startswith('NN')]
+
+    def morphs(self, phrase):
+        """Parse phrase to morphemes."""
+
+        return [s for s, t in self.pos(phrase.strip())]

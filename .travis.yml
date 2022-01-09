@@ -3,9 +3,10 @@ language: python
 python:
     - "2.7"
     - "3.6"
+    - "3.7"
 
 before_install:
-    - pip install -r requirements.txt
+    - if [ "$TRAVIS_PYTHON_VERSION" == "2.7" ]; then pip install -r requirements2.txt; else pip install -r requirements.txt; fi
     - pip install coveralls
     - pip install pytest-cov
 

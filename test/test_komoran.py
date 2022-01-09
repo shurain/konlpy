@@ -44,3 +44,13 @@ else:
              u'\uac00/VV',
              u'\uc790/EF',
              u'!/SF']
+
+    def test_komoran_morphs(komoran_instance, string):
+        assert komoran_instance.morphs(string) ==\
+            [u'\uaf43\uac00\ub9c8', u'\ud0c0', u'\uace0', u'\uac15\ub0a8', u'\uac00', u'\uc790', u'!']
+
+    def test_komoran_typechecking(komoran_instance):
+        try:
+            komoran_instance.pos([])
+        except AssertionError:
+            pass
